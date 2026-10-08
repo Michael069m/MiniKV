@@ -7,3 +7,11 @@
 ## Phase 2: Thread Safety with std::shared_mutex
 - **Decision**: Used `std::shared_mutex` (C++17) to implement a Reader-Writer lock (Single-Writer, Multiple-Readers pattern). Write operations (`set`, `del`) acquire an exclusive lock via `std::unique_lock`, while read operations (`get`, `exists`) acquire a shared lock via `std::shared_lock`. `mutex_` is marked `mutable` to permit locking inside `const` member functions.
 - **Trade-off**: Maximizes read concurrency by allowing simultaneous reader threads without blocking. However, write operations require global exclusive access, stalling readers during writes. Fine-grained bucket locking or lock-free data structures could provide higher write throughput at the expense of higher code complexity.
+
+## Phase 3: Write-Ahead Log (WAL) & Crash Recovery
+- **Decision**: Implemented an append-only Write-Ahead Log (`WAL`) using length-prefixed binary framing (`S <key_len> <val_len> <key><val>\n`). All write operations (`set`, `del`) log to disk prior to mutating the in-memory `unordered_map`. Startup replay restores system state sequentially.
+- **Trade-off**: `FsyncPolicy::ALWAYS` guarantees zero data loss on power crashes by forcing synchronous disk flushes, but reduces write throughput to disk I/O latency limits. Length-prefixed binary framing adds minor header overhead per entry but guarantees safe handling of arbitrary binary payloads containing spaces or newlines.
+
+## Phase 4: RESP Protocol Parser & Serializer
+- **Decision**: Built a non-destructive zero-copy streaming parser (`RespParser`) operating over `std::string_view` buffers, alongside a typed serializer (`RespValue`). Supports all standard Redis data types (Simple Strings, Errors, Integers, Bulk Strings, Nulls, Arrays, and inline fallback).
+- **Trade-off**: Returning `std::nullopt` on incomplete buffer reads enables seamless non-blocking TCP streaming without corrupting connection buffers. Constructing owned `std::string` objects during AST materialization simplifies memory management at the cost of heap allocation per frame token.
