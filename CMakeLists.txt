@@ -65,6 +65,7 @@ add_executable(unit_tests
     tests/test_wal.cpp
     tests/test_resp.cpp
     tests/test_server.cpp
+    tests/test_expiry.cpp
 )
 target_link_libraries(unit_tests PRIVATE miniredis_lib gtest_main)
 

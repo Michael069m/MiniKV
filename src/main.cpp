@@ -4,7 +4,7 @@
 #include "miniredis/server.hpp"
 
 int main() {
-    std::cout << "Starting MiniRedis Server (Phase 5 TCP + Thread Pool)...\n";
+    std::cout << "Starting MiniRedis Server (Phase 6 Expiry & Active Cleaner)...\n";
 
     const std::string wal_filepath = "miniredis.wal";
     miniredis::KVStore store;
@@ -15,6 +15,9 @@ int main() {
     std::cout << "Replayed " << replayed << " state operations.\n";
 
     store.set_wal(&wal);
+
+    // Start background key cleaner thread (purges expired keys every 100ms)
+    store.start_cleaner(std::chrono::milliseconds(100));
 
     miniredis::Server server(store, 6379, 4);
     server.start();

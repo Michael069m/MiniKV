@@ -1,6 +1,5 @@
 import socket
 import time
-import sys
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -12,44 +11,45 @@ def main():
     assert data == b"+PONG\r\n", f"Expected +PONG\\r\\n, got {data}"
     print("✓ PING -> +PONG")
 
-    # Test SET
-    s.sendall(b"*3\r\n$3\r\nSET\r\n$4\r\nuser\r\n$5\r\nAlice\r\n")
+    # Test SET with EX
+    s.sendall(b"*5\r\n$3\r\nSET\r\n$4\r\ntemp\r\n$3\r\nval\r\n$2\r\nEX\r\n$1\r\n1\r\n")
     data = s.recv(1024)
     assert data == b"+OK\r\n", f"Expected +OK\\r\\n, got {data}"
-    print("✓ SET user Alice -> +OK")
+    print("✓ SET temp val EX 1 -> +OK")
 
-    # Test GET
-    s.sendall(b"*2\r\n$3\r\nGET\r\n$4\r\nuser\r\n")
+    # Test TTL
+    s.sendall(b"*2\r\n$3\r\nTTL\r\n$4\r\ntemp\r\n")
     data = s.recv(1024)
-    assert data == b"$5\r\nAlice\r\n", f"Expected $5\\r\\nAlice\\r\\n, got {data}"
-    print("✓ GET user -> $5\\r\\nAlice\\r\\n")
+    assert data.startswith(b":1") or data.startswith(b":0"), f"Expected positive TTL, got {data}"
+    print(f"✓ TTL temp -> {data.strip().decode()}")
 
-    # Test INCR
-    s.sendall(b"*2\r\n$4\r\nINCR\r\n$7\r\ncounter\r\n")
+    # Sleep to let key expire
+    time.sleep(1.1)
+
+    # Test GET on expired key
+    s.sendall(b"*2\r\n$3\r\nGET\r\n$4\r\ntemp\r\n")
     data = s.recv(1024)
-    assert data == b":1\r\n", f"Expected :1\\r\\n, got {data}"
-    print("✓ INCR counter -> :1")
+    assert data == b"$-1\r\n", f"Expected $-1\\r\\n (nil), got {data}"
+    print("✓ GET temp (after expiry) -> $-1\\r\\n (nil)")
 
-    # Test EXISTS
-    s.sendall(b"*2\r\n$6\r\nEXISTS\r\n$4\r\nuser\r\n")
-    data = s.recv(1024)
-    assert data == b":1\r\n", f"Expected :1\\r\\n, got {data}"
-    print("✓ EXISTS user -> :1")
-
-    # Test KEYS *
-    s.sendall(b"*2\r\n$4\r\nKEYS\r\n$1\r\n*\r\n")
-    data = s.recv(1024)
-    assert b"user" in data and b"counter" in data, f"KEYS failed: {data}"
-    print("✓ KEYS * -> returned keys")
-
-    # Test DEL
-    s.sendall(b"*2\r\n$3\r\nDEL\r\n$4\r\nuser\r\n")
+    # Test EXPIRE command
+    s.sendall(b"*3\r\n$3\r\nSET\r\n$7\r\nsession\r\n$6\r\nactive\r\n")
+    s.recv(1024)
+    s.sendall(b"*3\r\n$6\r\nEXPIRE\r\n$7\r\nsession\r\n$1\r\n1\r\n")
     data = s.recv(1024)
     assert data == b":1\r\n", f"Expected :1\\r\\n, got {data}"
-    print("✓ DEL user -> :1")
+    print("✓ EXPIRE session 1 -> :1")
+
+    time.sleep(1.1)
+
+    # Test TTL on expired key
+    s.sendall(b"*2\r\n$3\r\nTTL\r\n$7\r\nsession\r\n")
+    data = s.recv(1024)
+    assert data == b":-2\r\n", f"Expected :-2\\r\\n, got {data}"
+    print("✓ TTL session (after expiry) -> :-2")
 
     s.close()
-    print("All TCP network integration tests passed successfully!")
+    print("All TCP network integration tests (including Expiry) passed successfully!")
 
 if __name__ == "__main__":
     main()

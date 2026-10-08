@@ -8,7 +8,6 @@ namespace miniredis {
 class CommandHandler {
 public:
     explicit CommandHandler(KVStore& store);
-
     RespValue handle_command(const RespValue& req);
 
 private:
@@ -21,6 +20,8 @@ private:
     RespValue handle_exists(const std::vector<RespValue>& args);
     RespValue handle_incr(const std::vector<RespValue>& args);
     RespValue handle_keys(const std::vector<RespValue>& args);
+    RespValue handle_expire(const std::vector<RespValue>& args);
+    RespValue handle_ttl(const std::vector<RespValue>& args);
 };
 
 } // namespace miniredis
