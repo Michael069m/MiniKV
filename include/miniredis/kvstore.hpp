@@ -11,14 +11,20 @@
 
 namespace miniredis {
 
-class WAL; // Forward declaration
+class WAL;
+
+struct KVEntry {
+    std::string key;
+    std::string value;
+    std::optional<uint64_t> ttl_seconds;
+};
 
 class KVStore {
 public:
     KVStore();
     ~KVStore();
 
-    // Prevent copying and moving
+    // Non-copyable, non-movable
     KVStore(const KVStore&) = delete;
     KVStore& operator=(const KVStore&) = delete;
     KVStore(KVStore&&) = delete;
@@ -34,7 +40,10 @@ public:
     int64_t ttl(const std::string& key);
     std::vector<std::string> keys();
 
-    // Background cleaner management
+    // Snapshot current non-expired state for compaction
+    std::vector<KVEntry> snapshot();
+
+    // Background cleaner
     void start_cleaner(std::chrono::milliseconds interval = std::chrono::milliseconds(100));
     void stop_cleaner();
     size_t cleanup_expired();

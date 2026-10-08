@@ -2,6 +2,9 @@
 #include "miniredis/kvstore.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace miniredis {
 
@@ -70,7 +73,7 @@ size_t WAL::replay(KVStore& store) {
             if (!(in >> key_len >> val_len)) break;
 
             char space;
-            in.get(space); // Consume single delimiter space
+            in.get(space);
 
             std::string key(key_len, '\0');
             in.read(&key[0], key_len);
@@ -79,7 +82,7 @@ size_t WAL::replay(KVStore& store) {
             in.read(&val[0], val_len);
 
             char newline;
-            in.get(newline); // Consume trailing newline
+            in.get(newline);
 
             store.set(key, val);
             count++;
@@ -88,13 +91,13 @@ size_t WAL::replay(KVStore& store) {
             if (!(in >> key_len)) break;
 
             char space;
-            in.get(space); // Consume delimiter space
+            in.get(space);
 
             std::string key(key_len, '\0');
             in.read(&key[0], key_len);
 
             char newline;
-            in.get(newline); // Consume trailing newline
+            in.get(newline);
 
             store.del(key);
             count++;
@@ -104,6 +107,39 @@ size_t WAL::replay(KVStore& store) {
     in.close();
     log_file_.open(filepath_, std::ios::out | std::ios::app | std::ios::binary);
     return count;
+}
+
+void WAL::compact(KVStore& store) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::string temp_filepath = filepath_ + ".tmp";
+    std::ofstream temp_file(temp_filepath, std::ios::out | std::ios::binary);
+    if (!temp_file.is_open()) {
+        throw std::runtime_error("Failed to open temporary WAL file for compaction: " + temp_filepath);
+    }
+
+    // Get live snapshot of non-expired keys/values
+    auto entries = store.snapshot();
+    for (const auto& entry : entries) {
+        temp_file << "S " << entry.key.size() << " " << entry.value.size() << " ";
+        temp_file.write(entry.key.data(), entry.key.size());
+        temp_file.write(entry.value.data(), entry.value.size());
+        temp_file << "\n";
+    }
+
+    temp_file.flush();
+    temp_file.close();
+
+    // Close active file handle before atomic swap
+    if (log_file_.is_open()) {
+        log_file_.close();
+    }
+
+    // Atomic file replacement
+    fs::rename(temp_filepath, filepath_);
+
+    // Re-open active log file in append mode
+    log_file_.open(filepath_, std::ios::out | std::ios::app | std::ios::binary);
 }
 
 } // namespace miniredis

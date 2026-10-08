@@ -6,7 +6,7 @@
 
 namespace miniredis {
 
-class KVStore; // Forward declaration
+class KVStore;
 
 enum class FsyncPolicy {
     ALWAYS,
@@ -30,6 +30,9 @@ public:
 
     // Replay log entries into KVStore instance to rebuild memory state
     size_t replay(KVStore& store);
+
+    // Compact WAL log by rewriting active state to temporary file and atomically swapping
+    void compact(KVStore& store);
     
     void sync();
 
