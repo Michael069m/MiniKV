@@ -37,6 +37,7 @@ include_directories(include)
 add_library(miniredis_lib
     src/kvstore.cpp
     src/wal.cpp
+    src/resp.cpp
 )
 
 # Driver Executable
@@ -59,6 +60,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(unit_tests
     tests/test_kvstore.cpp
     tests/test_wal.cpp
+    tests/test_resp.cpp
 )
 target_link_libraries(unit_tests PRIVATE miniredis_lib gtest_main)
 
