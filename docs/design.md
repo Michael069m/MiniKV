@@ -15,3 +15,7 @@
 ## Phase 4: RESP Protocol Parser & Serializer
 - **Decision**: Built a non-destructive zero-copy streaming parser (`RespParser`) operating over `std::string_view` buffers, alongside a typed serializer (`RespValue`). Supports all standard Redis data types (Simple Strings, Errors, Integers, Bulk Strings, Nulls, Arrays, and inline fallback).
 - **Trade-off**: Returning `std::nullopt` on incomplete buffer reads enables seamless non-blocking TCP streaming without corrupting connection buffers. Constructing owned `std::string` objects during AST materialization simplifies memory management at the cost of heap allocation per frame token.
+
+## Phase 5: POSIX TCP Server & ThreadPool Concurrency
+- **Decision**: Built a multithreaded network server using POSIX sockets (`socket`, `bind`, `listen`, `accept`) paired with a producer-consumer task queue `ThreadPool` guarded by `std::condition_variable`. Incoming client connections are offloaded to worker threads, executing RESP commands against `KVStore`.
+- **Trade-off**: Thread-per-connection / thread-pool model provides straightforward concurrent client handling and low implementation complexity. However, under tens of thousands of idle connections, thread stack memory overhead scales linearly compared to single-threaded event-loop architectures (e.g. `epoll`/`kqueue`).
