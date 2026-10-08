@@ -1,3 +1,6 @@
 build/
 *.wal
 .DS_Store
+test_bin
+miniredis_server
+unit_tests
