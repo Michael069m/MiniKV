@@ -38,6 +38,9 @@ add_library(miniredis_lib
     src/kvstore.cpp
     src/wal.cpp
     src/resp.cpp
+    src/thread_pool.cpp
+    src/command_handler.cpp
+    src/server.cpp
 )
 
 # Driver Executable
@@ -61,6 +64,7 @@ add_executable(unit_tests
     tests/test_kvstore.cpp
     tests/test_wal.cpp
     tests/test_resp.cpp
+    tests/test_server.cpp
 )
 target_link_libraries(unit_tests PRIVATE miniredis_lib gtest_main)
 

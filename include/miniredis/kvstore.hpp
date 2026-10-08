@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <optional>
 #include <shared_mutex>
+#include <vector>
 
 namespace miniredis {
 
@@ -26,6 +27,7 @@ public:
     std::optional<std::string> get(const std::string& key) const;
     bool del(const std::string& key);
     bool exists(const std::string& key) const;
+    std::vector<std::string> keys() const;
 
 private:
     std::unordered_map<std::string, std::string> store_;

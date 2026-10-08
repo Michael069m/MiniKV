@@ -1,9 +1,10 @@
 #include <iostream>
 #include "miniredis/kvstore.hpp"
 #include "miniredis/wal.hpp"
+#include "miniredis/server.hpp"
 
 int main() {
-    std::cout << "MiniRedis Server starting (Phase 3 WAL persistence)...\n";
+    std::cout << "Starting MiniRedis Server (Phase 5 TCP + Thread Pool)...\n";
 
     const std::string wal_filepath = "miniredis.wal";
     miniredis::KVStore store;
@@ -15,12 +16,8 @@ int main() {
 
     store.set_wal(&wal);
 
-    store.set("server:status", "running");
-    store.set("last_boot", "2026-10-09");
-
-    if (auto val = store.get("server:status")) {
-        std::cout << "GET server:status -> " << *val << "\n";
-    }
+    miniredis::Server server(store, 6379, 4);
+    server.start();
 
     return 0;
 }

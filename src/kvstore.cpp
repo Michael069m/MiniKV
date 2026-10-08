@@ -39,4 +39,14 @@ bool KVStore::exists(const std::string& key) const {
     return store_.find(key) != store_.end();
 }
 
+std::vector<std::string> KVStore::keys() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::vector<std::string> result;
+    result.reserve(store_.size());
+    for (const auto& [k, v] : store_) {
+        result.push_back(k);
+    }
+    return result;
+}
+
 } // namespace miniredis
